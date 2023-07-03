@@ -1,41 +1,42 @@
 #include <malloc.h>
 
+// #include <fstream>
 #include "judge.h"
 
 class Container : public IContainer {
-    bool* m_values;
-    int m_size = 0;
+    int size_of_int = 32;
+    int m_values[200000000 / 32];
+    int m_size = 200000000 / 32;
 
    public:
     void init(int size) {
-        m_size = size;
-        if (m_size > 0)
-            m_values = (bool*)malloc(m_size * sizeof(bool));
-        for(int i = 0; i<m_size; i++)
-            m_values[i]=false;
+        if (m_values) {
+            for (int i = 0; i < m_size; i++)
+                m_values[i] = 0;
+        }
     }
 
     bool add(int a) {
-        if (a >= m_size || a < 0 || m_values == NULL) return true;
+        if (a >= m_size * size_of_int || a < 0) return false;
 
-        if (!m_values[a]) {
-            m_values[a] = true;
+        if (!((m_values[a / size_of_int] & (1 << (a % size_of_int))))) {
+            m_values[a / size_of_int] |= (1 << (a % size_of_int));
             return true;
         }
         return false;
     }
 
     bool contains(int a) {
-        if (a >= m_size || a < 0 || m_values == NULL) return true;
+        if (a >= m_size * size_of_int || a < 0) return false;
 
-        return m_values[a];
+        return ((m_values[a / size_of_int]) & (1 << (a % size_of_int)));
     }
 
     bool remove(int a) {
-        if (a >= m_size || a < 0 || m_values == NULL) return true;
+        if (a >= m_size * size_of_int || a < 0) return false;
 
-        if (m_values[a]) {
-            m_values[a] = false;
+        if ((m_values[a / size_of_int]) & (1 << (a % size_of_int))) {
+            m_values[a / size_of_int] &= ~(1 << (a % size_of_int));
             return true;
         }
         return false;
@@ -43,6 +44,7 @@ class Container : public IContainer {
 };
 
 int main() {
+    // freopen("container0.in", "r", stdin);
     Container* container = new Container();
     Judge::run(container);
 }
