@@ -10,5 +10,10 @@ Bit manipulation
  - bit reversal (quickest way)
  
 ## week 2
-
+Backtracking and recursion
+ - create logo out of preset stamps
+ - overtime distribution between workers
+ - partition again, but recursive
+ - sudoku solver
+ - octopus comp
 ## week 3
