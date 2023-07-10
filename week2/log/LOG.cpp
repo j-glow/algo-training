@@ -21,18 +21,21 @@ class LOG : public iLOG {
         if (result != -1) return result;
 
         // DONT SKIP STAMP
-        for (int i = 0; i < 4; i++) {                                     // ALL POSSIBLE ROTATIONS
+        for (int i = 0; i < 4; i++) {                                         // ALL POSSIBLE ROTATIONS
             for (int row = 0; row < LOGO_SIZE - STAMP_SIZE + 1; row++) {      // ITERATE LOGO OVER ROWS
                 for (int col = 0; col < LOGO_SIZE - STAMP_SIZE + 1; col++) {  // ITERATE LOGO OVER COLS
-                    if (check_stamp(row, col, logo, stamps[n-1])) {         // IF STAMP MATCHES THE PLACE
-                        insert_stamp(row, col, logo, stamps[n-1]);          // INSERT IT
-                        result = solve(n - 1, logo, stamps);          // SOLVE STEP
-                        if (result != -1) return result++;                // IF SOLVED RETURN AND INCREMENT NB OF STAMPS USED
-                        remove_stamp(row, col, logo, stamps[n-1]);          // IF NOT REMOVE STAMP AND TRY ANTOHER PLACE
+                    if (check_stamp(row, col, logo, stamps[n - 1])) {         // IF STAMP MATCHES THE PLACE
+                        insert_stamp(row, col, logo, stamps[n - 1]);          // INSERT IT
+                        result = solve(n - 1, logo, stamps);                  // SOLVE STEP
+                        if (result != -1) {
+                            result++;
+                            return result;
+                        }                                             // IF SOLVED RETURN AND INCREMENT NB OF STAMPS USED
+                        remove_stamp(row, col, logo, stamps[n - 1]);  // IF NOT REMOVE STAMP AND TRY ANTOHER PLACE
                     }
                 }
             }
-            rotate(stamps[n-1]);
+            rotate(stamps[n - 1]);
         }
         return -1;
     }
@@ -94,10 +97,11 @@ class LOG : public iLOG {
         }
         return true;
     }
+
     void display_stamp(char stamp[STAMP_SIZE][STAMP_SIZE]) {
         for (int row = 0; row < STAMP_SIZE; row++) {
             for (int col = 0; col < STAMP_SIZE; col++) {
-                printf("%d ",stamp[row][col]);
+                printf("%d ", stamp[row][col]);
             }
             printf("\n");
         }
