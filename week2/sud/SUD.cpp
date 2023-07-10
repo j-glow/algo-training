@@ -4,13 +4,14 @@ class SUD : public ISUD {
    public:
     void solve(int t[9][9]) {
         int place = find_empty(t);
+        if(place==-1) return;
 		int row = place / 9;
 		int col = place % 9;
 		for(int num = 1; num<=9;num++){
 			if(check_num(t, row, col, num)){
 				t[row][col] = num;
 				solve(t);
-				t[row][col] = 0;
+                if(find_empty(t)!=-1) t[row][col] = 0;
 			}
 		}
 		return;
@@ -22,6 +23,7 @@ class SUD : public ISUD {
                 if (t[row][col]==0) return row*9+col;
             }
         }
+        return -1;
 	}
 
     bool check_num(int t[9][9], int row, int col, int num) {
