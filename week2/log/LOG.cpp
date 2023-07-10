@@ -7,18 +7,28 @@
 #define LOGO_SIZE 10
 
 class LOG : public iLOG {
+    int best_result = -1;
+
    public:
     virtual int solve(int n,
                       char logo[LOGO_SIZE][LOGO_SIZE],
                       char stamps[][STAMP_SIZE][STAMP_SIZE]) {
-        if (n == 0 && !check_logo(logo)) return -1;  // IF NO MORE STAMPS AND LOGO NOT READY RETURN -1
-        if (check_logo(logo)) return 0;              // IF LOGO READY RETURN 0 AND START COUNTING USED STAMPS
-        int result = -1;
+        best_result = -1;
+        iterate(n, logo, stamps, 0);
+        return best_result;
+    }
 
-        // FIRST SKIP, THEN USE TO MINIMIZE NUMBER OF STAMPS
+    void iterate(int n,
+                 char logo[LOGO_SIZE][LOGO_SIZE],
+                 char stamps[][STAMP_SIZE][STAMP_SIZE],
+                 int count) {
+        if (check_logo(logo)){ // IF LOGO READY UPDATE RESULTS
+            if(best_result==-1 || count<best_result) best_result=count;  
+        }
+        if(n==0) return;
+
         // SKIP STAMP
-        result = solve(n - 1, logo, stamps);
-        if (result != -1) return result;
+        iterate(n - 1, logo, stamps, count);
 
         // DONT SKIP STAMP
         for (int i = 0; i < 4; i++) {                                         // ALL POSSIBLE ROTATIONS
@@ -26,18 +36,13 @@ class LOG : public iLOG {
                 for (int col = 0; col < LOGO_SIZE - STAMP_SIZE + 1; col++) {  // ITERATE LOGO OVER COLS
                     if (check_stamp(row, col, logo, stamps[n - 1])) {         // IF STAMP MATCHES THE PLACE
                         insert_stamp(row, col, logo, stamps[n - 1]);          // INSERT IT
-                        result = solve(n - 1, logo, stamps);                  // SOLVE STEP
-                        if (result != -1) {
-                            result++;
-                            return result;
-                        }                                             // IF SOLVED RETURN AND INCREMENT NB OF STAMPS USED
+                        iterate(n - 1, logo, stamps, count + 1);
                         remove_stamp(row, col, logo, stamps[n - 1]);  // IF NOT REMOVE STAMP AND TRY ANTOHER PLACE
                     }
                 }
             }
             rotate(stamps[n - 1]);
         }
-        return -1;
     }
 
     void insert_stamp(int row0, int col0,
