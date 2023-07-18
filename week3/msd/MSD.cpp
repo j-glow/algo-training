@@ -143,34 +143,34 @@ class MSD : public IMSD {
     }
 
     void getMostSafeDir(char *result) {
-        std::map<Dir &, int> security;
-        std::queue<Dir &> queue;
-        std::vector<Dir &> sysFiles;
+        std::map<Dir *, int> security;
+        std::queue<Dir *> queue;
+        std::vector<Dir *> sysFiles;
         std::set<Dir *> seen;
 
-        queue.push(home);
+        queue.push(&home);
         while (!queue.empty()) {
-            if (queue.front().isSystemFile()) {
+            if (queue.front()->isSystemFile()) {
                 sysFiles.push_back(queue.front());
             }
-            for (auto i : queue.front().getSubdirs()) {
-                queue.push(i.second);
+            for (auto i : queue.front()->getSubdirs()) {
+                queue.push(&i.second);
             }
             queue.pop();
         }
 
         for (auto i : sysFiles) {
             seen.clear();
-            queue = std::queue<Dir &>();
+            queue = std::queue<Dir *>();
             queue.push(i);
-            std::queue<Dir &> new_queue;
+            std::queue<Dir *> new_queue;
             int security_level = 0;
             while (!queue.empty()) {
-                if (seen.count(&queue.front()) != 0) {
+                if (seen.count(queue.front()) != 0) {
                     queue.pop();
                     continue;
                 }
-                seen.insert(&queue.front());
+                seen.insert(queue.front());
 
                 if (security.count(queue.front()) == 0)
                     security[queue.front()] = security_level;
@@ -179,11 +179,11 @@ class MSD : public IMSD {
                         security[queue.front()] = security_level;
                 }
 
-                for (auto i : queue.front().getSubdirs()) {
-                    new_queue.push(i.second);
+                for (auto i : queue.front()->getSubdirs()) {
+                    new_queue.push(&i.second);
                 }
-                for (auto i : queue.front().getLinks()) {
-                    new_queue.push(*i.second);
+                for (auto i : queue.front()->getLinks()) {
+                    new_queue.push(i.second);
                 }
 
                 security_level++;
