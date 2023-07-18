@@ -3,13 +3,14 @@
 #include <map>
 #include <queue>
 #include <ranges>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "judge.h"
 
 class Dir {
-    std::string m_name = std::string("");
+    std::string m_name = std::string("\0");
     Dir *m_parent = nullptr;
     std::map<std::string, Dir> m_subDirs = std::map<std::string, Dir>();
     std::map<std::string, Dir *> m_links = std::map<std::string, Dir *>();
@@ -19,8 +20,7 @@ class Dir {
     Dir() {
     }
 
-    Dir(std::string name, Dir *parent) : 
-    m_name(name), m_parent(parent) {
+    Dir(std::string name, Dir *parent) : m_name(name), m_parent(parent) {
     }
 
     void addSubDir(std::string name) {
@@ -58,8 +58,19 @@ class Dir {
         }
         return path;
     }
-    void makeSystemFile(){
+    void makeSystemFile() {
         m_isSystemFile = true;
+    }
+    bool isSystemFile() {
+        return m_isSystemFile;
+    }
+
+    std::map<std::string, Dir> &getSubdirs() {
+        return m_subDirs;
+    }
+
+    std::map<std::string, Dir *> &getLinks() {
+        return m_links;
     }
 };
 
@@ -72,24 +83,24 @@ class MSD : public IMSD {
     }
 
     void makeDir(char *path, char *name) {
-        std::queue<std::string> pathfolders;
+        std::queue<std::string> folders;
         std::string buf;
         for (int i = 0; path[i] != '\0'; i++) {
             if (path[i] == '/' && i != 0) {
-                pathfolders.push(buf);
+                folders.push(buf);
                 buf.clear();
-            } else
+            } else if (i != 0)
                 buf.push_back(path[i]);
         }
 
         std::string child = name;
-        if (pathfolders.empty()) {
+        if (folders.empty()) {
             home.addSubDir(name);
         } else {
-            Dir curr;
-            while (curr.getName() != pathfolders.back()) {
-                curr = curr[pathfolders.front()];
-                pathfolders.pop();
+            Dir curr = home;
+            while (curr.getName() != folders.back()) {
+                curr = curr[folders.front()];
+                folders.pop();
             }
             curr.addSubDir(name);
         }
@@ -114,7 +125,7 @@ class MSD : public IMSD {
             } else
                 buf.push_back(pathDst[i]);
         }
-        src.addLink(&dst,pathDst);
+        src.addLink(&dst, pathDst);
     }
 
     void makeSystemFile(char *path) {
@@ -132,6 +143,54 @@ class MSD : public IMSD {
     }
 
     void getMostSafeDir(char *result) {
+        std::map<Dir &, int> security;
+        std::queue<Dir &> queue;
+        std::vector<Dir &> sysFiles;
+        std::set<Dir *> seen;
+
+        queue.push(home);
+        while (!queue.empty()) {
+            if (queue.front().isSystemFile()) {
+                sysFiles.push_back(queue.front());
+            }
+            for (auto i : queue.front().getSubdirs()) {
+                queue.push(i.second);
+            }
+            queue.pop();
+        }
+
+        for (auto i : sysFiles) {
+            seen.clear();
+            queue = std::queue<Dir &>();
+            queue.push(i);
+            std::queue<Dir &> new_queue;
+            int security_level = 0;
+            while (!queue.empty()) {
+                if (seen.count(&queue.front()) != 0) {
+                    queue.pop();
+                    continue;
+                }
+                seen.insert(&queue.front());
+
+                if (security.count(queue.front()) == 0)
+                    security[queue.front()] = security_level;
+                else {
+                    if (security[queue.front()] < security_level)
+                        security[queue.front()] = security_level;
+                }
+
+                for (auto i : queue.front().getSubdirs()) {
+                    new_queue.push(i.second);
+                }
+                for (auto i : queue.front().getLinks()) {
+                    new_queue.push(*i.second);
+                }
+
+                security_level++;
+                queue.pop();
+            }
+            queue = new_queue;
+        }
     }
 };
 
