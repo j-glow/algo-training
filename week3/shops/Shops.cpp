@@ -1,4 +1,5 @@
 #include <fstream>
+#include <iostream>
 #include <queue>
 #include <vector>
 
@@ -25,6 +26,7 @@ class Shops : public iShops {
             visited = std::vector<std::vector<bool>>(256, std::vector<bool>(256, false));
 
             auto distance = bfs(i, data);
+            if (distance == -1) return -1;
 
             if (distance > max) max = distance;
         }
@@ -35,36 +37,54 @@ class Shops : public iShops {
     int bfs(std::pair<int, int> coord, char data[256][256]) {
         int distance = 0;
         queue.push(coord);
+        int result = 0;
 
         while (!queue.empty()) {
             distance += 1;
-            queue = next_queue(data);
+            result = solve_queue(data);
         }
-        return distance-1;
+
+        if (result == 1)
+            return distance - 1;
+        else
+            return -1;
     }
-    std::queue<std::pair<int, int>> next_queue(char data[256][256]) {
+    int solve_queue(char data[256][256]) {
         std::queue<std::pair<int, int>> new_queue;
 
         while (!queue.empty()) {
             auto coord = queue.front();
             queue.pop();
 
-            if (coord.first < 0 || coord.first > 255 || coord.second < 0 || coord.second > 255)
-                continue;
-            if (visited[coord.first][coord.second])
-                continue;
-            visited[coord.first][coord.second] = true;
-            if (data[coord.first][coord.second] == 'S')
-                return std::queue<std::pair<int, int>>();
-            if (data[coord.first][coord.second] == 'P')
-                continue;
+            if (data[coord.first][coord.second] == 'S') {
+                queue = std::queue<std::pair<int, int>>();
+                return 1;
+            }
 
-            new_queue.push({coord.first + 1, coord.second});
-            new_queue.push({coord.first - 1, coord.second});
-            new_queue.push({coord.first, coord.second + 1});
-            new_queue.push({coord.first, coord.second - 1});
+            if (check_coord({coord.first + 1, coord.second}, data))
+                new_queue.push({coord.first + 1, coord.second});
+            if (check_coord({coord.first - 1, coord.second}, data))
+                new_queue.push({coord.first - 1, coord.second});
+            if (check_coord({coord.first, coord.second + 1}, data))
+                new_queue.push({coord.first, coord.second + 1});
+            if (check_coord({coord.first, coord.second - 1}, data))
+                new_queue.push({coord.first, coord.second - 1});
         }
-        return new_queue;
+        if (new_queue.empty()) return -1;
+        queue = new_queue;
+        return 0;
+    }
+
+    bool check_coord(std::pair<int, int> coord, char data[256][256]) {
+        if (coord.first < 0 || coord.first > 255 || coord.second < 0 || coord.second > 255)
+            return false;
+        if (visited[coord.first][coord.second])
+            return false;
+        visited[coord.first][coord.second] = true;
+        if (data[coord.first][coord.second] == 'P')
+            return false;
+
+        return true;
     }
 };
 
