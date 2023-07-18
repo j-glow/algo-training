@@ -16,4 +16,11 @@ Backtracking and recursion
  - partition again, but recursive
  - sudoku solver
  - octopus comp
+ 
 ## week 3
+Graphs
+ - Airports BFS 
+ - Graph 2-coloring
+ - Create filesystem and find safest directiory
+ - 2D map BFS
+ - "Tower of Hanoi"-like water puzzle
