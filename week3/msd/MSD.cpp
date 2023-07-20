@@ -9,6 +9,8 @@
 
 #include "judge.h"
 
+#define MAX_DIRS 6000
+
 class Dir {
     std::string m_path = std::string("/");
     int m_parent = -1;
@@ -47,14 +49,16 @@ class Dir {
 };
 
 class MSD : public IMSD {
-    Dir dirs[10000];
+    std::vector<Dir> dirs;
     std::map<std::string, int> dir_ptrs;
     int ID;
 
    public:
     void init() {
+        dirs.reserve(MAX_DIRS);
+        dirs.clear();
         ID = 1;
-        dirs[0] = Dir();
+        dirs.push_back(Dir());
         dir_ptrs["/"] = 0;
     }
 
@@ -65,7 +69,7 @@ class MSD : public IMSD {
 
         dirs[dir_ptrs[s_path]].addSubDir(ID);
 
-        dirs[ID] = Dir(std::string(fullpath), dir_ptrs[s_path]);
+        dirs.push_back(Dir(std::string(fullpath), dir_ptrs[s_path]));
         dir_ptrs[fullpath] = ID;
 
         ID++;
@@ -80,15 +84,16 @@ class MSD : public IMSD {
     }
 
     void getMostSafeDir(char *result) {
-        int security[10000];
+        std::vector<int> security;
         std::queue<int> queue;
         std::vector<int> sources;
-        bool seen[10000] = {false};
+        std::vector<bool> seen;
 
-        for(int i = 0 ; i< ID;i++){
-            seen[i]=false;
-            security[i]=0;
-        }
+        sources.reserve(MAX_DIRS);
+
+        sources.clear();
+        security = std::vector<int>(ID, 0);
+        seen = std::vector<bool>(ID, false);
 
         // SCAN FOR SOURCE FILES
         queue.push(0);
@@ -108,14 +113,13 @@ class MSD : public IMSD {
 
         // BFS FROM SOURCE FILES TO FIND CLOSEST SYSFILE
         for (auto i : sources) {
-            for (int i = 0; i < ID; i++) {
-                seen[i] = false;
-            }
+            seen = std::vector<bool>(ID, false);
+
             queue = std::queue<int>();
             queue.push(i);
             std::queue<int> new_queue;
             int security_level = 0;
-            while (!queue.empty() && security[i]==0) {
+            while (!queue.empty()) {
                 while (!queue.empty()) {
                     seen[queue.front()] = true;
 
@@ -126,13 +130,14 @@ class MSD : public IMSD {
                     }
                     for (auto j : dirs[queue.front()].getSubdirs()) {
                         if (!seen[j]) new_queue.push(j);
-                        seen[j]=true;
+                        seen[j] = true;
                     }
                     if (dirs[queue.front()].getParent() != -1 && !seen[dirs[queue.front()].getParent()])
                         new_queue.push(dirs[queue.front()].getParent());
 
                     queue.pop();
                 }
+                if(security[i] != 0) break;
                 security_level++;
                 queue = new_queue;
                 new_queue = std::queue<int>();
@@ -141,7 +146,7 @@ class MSD : public IMSD {
 
         // Get most secure location
         int max = 0;
-        for (int i = 0; i<ID; i++) {
+        for (int i = 0; i < ID; i++) {
             if (security[i] > max) {
                 max = security[i];
                 strcpy(result, dirs[i].getPath().c_str());
@@ -152,7 +157,7 @@ class MSD : public IMSD {
 
 MSD solution;
 int main() {
-    // freopen("in/MSD0b.in", "r", stdin);
+    freopen("in/MSD0e.in", "r", stdin);
     Judge::run(&solution);
     return 0;
 }
