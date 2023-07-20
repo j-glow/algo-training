@@ -9,58 +9,27 @@
 
 #include "judge.h"
 
-namespace {
-    
-}
 class Dir {
-    std::string m_name = std::string("\0");
-    Dir *m_parent = nullptr;
-    std::map<std::string, Dir> m_subDirs = std::map<std::string, Dir>();
-    std::map<std::string, Dir *> m_links = std::map<std::string, Dir *>();
+    std::string m_path = std::string("/");
+    int m_parent = -1;
+    std::set<int> m_subDirs;
     bool m_isSystemFile = false;
 
    public:
     Dir() {
     }
 
-    Dir(std::string name, Dir *parent) : m_name(name), m_parent(parent) {
+    Dir(std::string path, int parent) : m_path(path), m_parent(parent) {
     }
 
-    void addSubDir(std::string name) {
-        m_subDirs[name] = Dir(name, this);
-    }
-
-    void addLink(Dir *adress, std::string name) {
-        m_links[name] = adress;
-    }
-
-    Dir *getLink(std::string name) {
-        return m_links[name];
-    }
-
-    std::string getName() {
-        return m_name;
-    }
-
-    Dir &operator[](std::string name) {
-        return m_subDirs[name];
+    void addSubDir(int subdir) {
+        m_subDirs.insert(subdir);
     }
 
     std::string getPath() {
-        std::vector<std::string> folders;
-        Dir *curr = this;
-        while (curr->m_parent != nullptr) {
-            folders.push_back(curr->getName());
-            curr = curr->m_parent;
-        }
-        std::string path = "/";
-        while (!folders.empty()) {
-            path.append(folders.back());
-            folders.pop_back();
-            path.append("/");
-        }
-        return path;
+        return m_path;
     }
+
     void makeSystemFile() {
         m_isSystemFile = true;
     }
@@ -68,149 +37,114 @@ class Dir {
         return m_isSystemFile;
     }
 
-    std::map<std::string, Dir> *getSubdirs() {
-        return &m_subDirs;
+    std::set<int> &getSubdirs() {
+        return m_subDirs;
     }
 
-    std::map<std::string, Dir *> *getLinks() {
-        return &m_links;
-    }
-    Dir *getParent() {
+    int getParent() {
         return m_parent;
     }
 };
 
 class MSD : public IMSD {
-    Dir m_home;
+    Dir dirs[10000];
+    std::map<std::string, int> dir_ptrs;
+    int ID;
 
    public:
     void init() {
-        m_home = Dir();
+        ID = 1;
+        dirs[0] = Dir();
+        dir_ptrs["/"] = 0;
     }
 
     void makeDir(char *path, char *name) {
-        std::queue<std::string> folders;
-        std::string buf;
-        for (int i = 0; path[i] != '\0'; i++) {
-            if (path[i] == '/' && i != 0) {
-                folders.push(buf);
-                buf.clear();
-            } else if (i != 0)
-                buf.push_back(path[i]);
-        }
+        std::string s_path = path;
+        std::string s_name = name;
+        std::string fullpath = s_path + s_name + "/";
 
-        if (folders.empty()) {
-            m_home.addSubDir(std::string(name));
-        } else {
-            Dir *curr = &m_home;
-            while (curr->getName() != folders.back()) {
-                curr = &(*curr)[folders.front()];
-                folders.pop();
-            }
-            curr->addSubDir(std::string(name));
-        }
+        dirs[dir_ptrs[s_path]].addSubDir(ID);
+
+        dirs[ID] = Dir(std::string(fullpath), dir_ptrs[s_path]);
+        dir_ptrs[fullpath] = ID;
+
+        ID++;
     }
 
     void makeLink(char *pathSrc, char *pathDst) {
-        Dir *src = &m_home;
-        Dir *dst = &m_home;
-
-        std::string buf;
-        for (int i = 0; pathSrc[i] != '\0'; i++) {
-            if (pathSrc[i] == '/' && i != 0) {
-                src = &(*src)[buf];
-                buf.clear();
-            } else if (i != 0)
-                buf.push_back(pathSrc[i]);
-        }
-        for (int i = 0; pathDst[i] != '\0'; i++) {
-            if (pathDst[i] == '/' && i != 0) {
-                dst = &(*dst)[buf];
-                buf.clear();
-            } else if (i != 0)
-                buf.push_back(pathDst[i]);
-        }
-        src->addLink(dst, pathDst);
+        dirs[dir_ptrs[pathSrc]].addSubDir(dir_ptrs[pathDst]);
     }
 
     void makeSystemFile(char *path) {
-        Dir *curr = &m_home;
-
-        std::string buf;
-        for (int i = 0; path[i] != '\0'; i++) {
-            if (path[i] == '/' && i != 0) {
-                curr = &(*curr)[buf];
-                buf.clear();
-            } else if (i != 0)
-                buf.push_back(path[i]);
-        }
-        curr->makeSystemFile();
+        dirs[dir_ptrs[path]].makeSystemFile();
     }
 
     void getMostSafeDir(char *result) {
-        std::map<Dir *, int> security;
-        std::queue<Dir *> queue;
-        std::vector<Dir *> sysFiles;
-        std::set<Dir *> seen;
+        int security[10000];
+        std::queue<int> queue;
+        std::vector<int> sources;
+        bool seen[10000] = {false};
 
-        // SCAN FOR SYSTEM FILES
-        queue.push(&m_home);
+        for(int i = 0 ; i< ID;i++){
+            seen[i]=false;
+            security[i]=0;
+        }
+
+        // SCAN FOR SOURCE FILES
+        queue.push(0);
+        seen[0] = true;
         while (!queue.empty()) {
-            if (queue.front()->isSystemFile()) {
-                sysFiles.push_back(queue.front());
+            if (!dirs[queue.front()].isSystemFile()) {
+                sources.push_back(queue.front());
             }
 
-            std::map<std::string, Dir> *dirs = queue.front()->getSubdirs();
-            for (auto it = dirs->begin(); it != dirs->end(); it++) {
-                queue.push(&(it->second));
+            for (auto i : dirs[queue.front()].getSubdirs()) {
+                if (seen[i] == false)
+                    queue.push(i);
+                seen[i] = true;
             }
             queue.pop();
         }
 
-        // BFS FROM SYSTEM FILES TO SET SECURITY LEVELS
-        for (auto i : sysFiles) {
-            seen.clear();
-            queue = std::queue<Dir *>();
+        // BFS FROM SOURCE FILES TO FIND CLOSEST SYSFILE
+        for (auto i : sources) {
+            for (int i = 0; i < ID; i++) {
+                seen[i] = false;
+            }
+            queue = std::queue<int>();
             queue.push(i);
-            std::queue<Dir *> new_queue;
-            for (int security_level = 0; !queue.empty(); security_level++, new_queue = std::queue<Dir *>()) {
+            std::queue<int> new_queue;
+            int security_level = 0;
+            while (!queue.empty() && security[i]==0) {
                 while (!queue.empty()) {
-                    if (seen.count(queue.front()) != 0) {
-                        queue.pop();
-                        continue;
-                    }
-                    seen.insert(queue.front());
+                    seen[queue.front()] = true;
 
-                    if (security.count(queue.front()) == 0)
-                        security[queue.front()] = security_level;
-                    else {
-                        if (security[queue.front()] > security_level)
-                            security[queue.front()] = security_level;
+                    if (dirs[queue.front()].isSystemFile()) {
+                        security[i] = security_level;
+                        new_queue = std::queue<int>();
+                        break;
                     }
-
-                    auto dirs = queue.front()->getSubdirs();
-                    for (auto &i : *dirs) {
-                        new_queue.push(&i.second);
+                    for (auto j : dirs[queue.front()].getSubdirs()) {
+                        if (!seen[j]) new_queue.push(j);
+                        seen[j]=true;
                     }
-                    auto links = queue.front()->getLinks();
-                    for (auto &i : *links) {
-                        new_queue.push(i.second);
-                    }
-                    if (queue.front()->getParent() != nullptr)
-                        new_queue.push(queue.front()->getParent());
+                    if (dirs[queue.front()].getParent() != -1 && !seen[dirs[queue.front()].getParent()])
+                        new_queue.push(dirs[queue.front()].getParent());
 
                     queue.pop();
                 }
+                security_level++;
                 queue = new_queue;
+                new_queue = std::queue<int>();
             }
         }
 
         // Get most secure location
         int max = 0;
-        for (auto i : security) {
-            if (i.second > max) {
-                max = i.second;
-                strcpy(result, i.first->getPath().c_str());
+        for (int i = 0; i<ID; i++) {
+            if (security[i] > max) {
+                max = security[i];
+                strcpy(result, dirs[i].getPath().c_str());
             }
         }
     }
@@ -218,7 +152,7 @@ class MSD : public IMSD {
 
 MSD solution;
 int main() {
-    freopen("in/MSD0c.in", "r", stdin);
+    // freopen("in/MSD0b.in", "r", stdin);
     Judge::run(&solution);
     return 0;
 }
